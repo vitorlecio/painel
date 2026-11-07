@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Painel">
+<title>Painel</title>
+<style>
+  /* ====== Feito para Safari 10 (iPad 4): só flexbox com prefixo, sem CSS moderno ====== */
+  html, body { margin: 0; padding: 0; height: 100%; background: #111; color: #eee;
+    font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif;
+    -webkit-user-select: none; -webkit-tap-highlight-color: rgba(0,0,0,0); overflow: hidden; }
+  #app { height: 100%; display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column;
+    padding: 16px; box-sizing: border-box; -webkit-transition: opacity 2s; transition: opacity 2s; }
+  .row { display: -webkit-flex; display: flex; -webkit-flex: 1; flex: 1; min-height: 0; }
+  .card { -webkit-flex: 1; flex: 1; background: #1c1c1e; border-radius: 18px; margin: 6px; padding: 14px 18px;
+    box-sizing: border-box; display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column;
+    -webkit-justify-content: center; justify-content: center; -webkit-align-items: center; align-items: center;
+    overflow: hidden; }
+  .card.top { -webkit-justify-content: flex-start; justify-content: flex-start; -webkit-align-items: stretch; align-items: stretch; }
+  .w2 { -webkit-flex: 1.4; flex: 1.4; }
+  .label { font-size: 17px; color: #8e8e93; text-transform: uppercase; letter-spacing: 2px; }
+  .big { font-size: 80px; font-weight: 200; line-height: 1.05; }
+  .mid { font-size: 50px; font-weight: 200; }
+  .small { font-size: 20px; color: #aeaeb2; margin-top: 4px; }
+  #forecast { display: -webkit-flex; display: flex; margin-top: 10px; }
+  .day { text-align: center; margin: 0 12px; font-size: 18px; color: #aeaeb2; }
+  .day b { display: block; font-size: 26px; color: #eee; font-weight: 300; }
+  .btns { margin-top: 8px; }
+  .btn { display: inline-block; font-size: 20px; padding: 8px 16px; margin: 3px; border-radius: 12px;
+    background: #2c2c2e; color: #eee; }
+  .btn.on { background: #0a84ff; }
+  #pomo.done { background: #7a1f1f; }
+  #pCount { font-size: 18px; color: #8e8e93; margin-top: 4px; }
+
+  /* tarefas */
+  .head { display: -webkit-flex; display: flex; -webkit-justify-content: space-between; justify-content: space-between;
+    -webkit-align-items: center; align-items: center; margin-bottom: 6px; }
+  #todo ul { list-style: none; margin: 0; padding: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; -webkit-flex: 1; flex: 1; }
+  #todo li { font-size: 22px; padding: 7px 0; border-bottom: 1px solid #2c2c2e;
+    display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; }
+  #todo li .box { width: 22px; height: 22px; border: 2px solid #636366; border-radius: 6px; margin-right: 12px; -webkit-flex-shrink: 0; flex-shrink: 0; }
+  #todo li .txt { -webkit-flex: 1; flex: 1; }
+  #todo li .del { color: #636366; font-size: 26px; padding: 0 6px 0 16px; }
+  #todo li.done .txt { color: #636366; text-decoration: line-through; }
+  #todo li.done .box { background: #30d158; border-color: #30d158; }
+  #todo .empty { color: #636366; font-size: 20px; padding-top: 10px; }
+
+  /* citação + hamel */
+  #quote { font-size: 23px; font-weight: 300; line-height: 1.35; font-style: italic; text-align: center; }
+  #author { font-size: 17px; color: #8e8e93; margin-top: 8px; text-align: center; }
+  #feed { font-size: 17px; color: #aeaeb2; margin-top: 16px; padding-top: 10px; border-top: 1px solid #2c2c2e;
+    text-align: center; width: 100%; display: none; }
+  #feed .new { background: #ff9f0a; color: #111; border-radius: 6px; padding: 1px 6px; font-weight: 600; margin-right: 6px; }
+
+  body.night #app { opacity: 0.15; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="row">
+    <div class="card">
+      <div class="label" id="lblLocal">Aqui</div>
+      <div class="big" id="tLocal">--:--</div>
+      <div class="small" id="dLocal"></div>
+    </div>
+    <div class="card">
+      <div class="label" id="lblBr">Brasil</div>
+      <div class="big" id="tBr">--:--</div>
+      <div class="small" id="dBr"></div>
+    </div>
+    <div class="card w2" id="weather">
+      <div class="label" id="lblCity">Tempo</div>
+      <div class="mid" id="wNow">…</div>
+      <div class="small" id="wDesc"></div>
+      <div id="forecast"></div>
+    </div>
+  </div>
+  <div class="row" style="-webkit-flex: 1.6; flex: 1.6;">
+    <div class="card top w2" id="todo">
+      <div class="head"><span class="label">Hoje</span><span class="btn" id="tAdd">+ tarefa</span></div>
+      <ul id="tList"></ul>
+    </div>
+    <div class="card" id="pomo">
+      <div class="label">Foco</div>
+      <div class="big" id="pTime">45:00</div>
+      <div id="pCount"></div>
+      <div class="btns">
+        <span class="btn" data-min="45">45</span>
+        <span class="btn" data-min="25">25</span>
+        <span class="btn" data-min="5">5</span><br>
+        <span class="btn" id="pStart">Iniciar</span>
+        <span class="btn" id="pReset">Zerar</span>
+      </div>
+    </div>
+  </div>
+  <div class="row" style="-webkit-flex: 0.75; flex: 0.75;">
+    <div class="card">
+      <div id="quote"></div>
+      <div id="author"></div>
+      <div id="feed"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =================== CONFIGURAÇÃO — edite só aqui =================== */
+var CONFIG = {
+  cidade: "Nice",
+  lat: 43.70, lon: 7.27,          // coordenadas da previsão
+  rotuloLocal: "Nice",
+  rotuloBrasil: "Brasília",
+  offsetBrasil: -3,               // Brasília = UTC-3 (sem horário de verão desde 2019)
+  pomodoroPadrao: 45,             // minutos
+  noiteInicio: 23, noiteFim: 7,   // horas em que a tela escurece (use -1 em ambos para desligar)
+
+  // Tarefas que voltam todo dia (desmarcadas a cada manhã). Deixe [] se não quiser nenhuma.
+  tarefasFixas: [
+    // "Revisar e-mails",
+    // "30 min de francês"
+  ],
+
+  // Feed de um site para mostrar o post mais recente. Deixe [] para desligar.
+  feeds: ["https://hamel.dev/blog/index.xml", "https://hamel.dev/index.xml"],
+  feedNome: "hamel.dev",
+
+  // Citações: troque a cada hora. Adicione as suas no formato ["texto", "autor"].
+  citacoes: [
+    ["Não é que tenhamos pouco tempo; é que perdemos muito dele.", "Sêneca"],
+    ["Enquanto adiamos, a vida passa.", "Sêneca"],
+    ["Sofremos mais na imaginação do que na realidade.", "Sêneca"],
+    ["Nenhum vento é favorável para quem não sabe aonde vai.", "Sêneca"],
+    ["A alma se tinge da cor dos seus pensamentos.", "Marco Aurélio"],
+    ["O que impede a ação faz a ação avançar. O que está no caminho torna-se o caminho.", "Marco Aurélio"],
+    ["Não são as coisas que nos perturbam, mas as opiniões que temos sobre elas.", "Epicteto"],
+    ["Algumas coisas dependem de nós; outras, não.", "Epicteto"],
+    ["Não estrague o que você tem desejando o que não tem.", "Epicuro"],
+    ["Ninguém entra duas vezes no mesmo rio.", "Heráclito"],
+    ["A vida não examinada não vale a pena ser vivida.", "Sócrates, segundo Platão"],
+    ["Toda a infelicidade dos homens vem de não saberem ficar quietos num quarto.", "Pascal"],
+    ["Quando danço, danço; quando durmo, durmo.", "Montaigne"],
+    ["Tudo o que é excelente é tão difícil quanto raro.", "Spinoza"],
+    ["Tenha a coragem de servir-se do seu próprio entendimento.", "Kant"],
+    ["Quem tem um porquê para viver suporta quase qualquer como.", "Nietzsche"],
+    ["Os limites da minha linguagem significam os limites do meu mundo.", "Wittgenstein"],
+    ["A atenção é a forma mais rara e mais pura de generosidade.", "Simone Weil"],
+    ["Uma jornada de mil léguas começa com um passo.", "Lao-Tsé"],
+    ["O primeiro princípio é não enganar a si mesmo — e você é a pessoa mais fácil de enganar.", "Richard Feynman"]
+  ]
+};
+/* ==================================================================== */
+
+var DIAS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+var MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+function $(id) { return document.getElementById(id); }
+function p2(n) { return (n < 10 ? "0" : "") + n; }
+function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+function today() { var d = new Date(); return d.getFullYear() + "-" + p2(d.getMonth() + 1) + "-" + p2(d.getDate()); }
+function load(k, def) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : def; } catch (e) { return def; } }
+function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+function tap(el, fn) {
+  el.addEventListener("touchend", function (e) { e.preventDefault(); fn(e); }, false);
+  el.addEventListener("click", fn, false);
+}
+
+$("lblLocal").innerHTML = CONFIG.rotuloLocal;
+$("lblBr").innerHTML = CONFIG.rotuloBrasil;
+$("lblCity").innerHTML = CONFIG.cidade;
+
+/* ---------- Relógios ---------- */
+function tickClock() {
+  var now = new Date();
+  $("tLocal").innerHTML = p2(now.getHours()) + ":" + p2(now.getMinutes());
+  $("dLocal").innerHTML = DIAS[now.getDay()] + ", " + now.getDate() + " " + MESES[now.getMonth()];
+
+  var br = new Date(now.getTime() + CONFIG.offsetBrasil * 3600000);
+  $("tBr").innerHTML = p2(br.getUTCHours()) + ":" + p2(br.getUTCMinutes());
+  $("dBr").innerHTML = DIAS[br.getUTCDay()] + ", " + br.getUTCDate() + " " + MESES[br.getUTCMonth()];
+
+  var h = now.getHours(), a = CONFIG.noiteInicio, b = CONFIG.noiteFim;
+  var night = a >= 0 && (a > b ? (h >= a || h < b) : (h >= a && h < b));
+  document.body.className = night ? "night" : "";
+}
+
+/* ---------- Tempo (Open-Meteo, sem chave) ---------- */
+function wInfo(c) {
+  if (c === 0) return ["☀️", "Céu limpo"];
+  if (c <= 2) return ["⛅", "Parcialmente nublado"];
+  if (c === 3) return ["☁️", "Nublado"];
+  if (c <= 48) return ["🌫", "Neblina"];
+  if (c <= 57) return ["🌦", "Garoa"];
+  if (c <= 67) return ["🌧", "Chuva"];
+  if (c <= 77) return ["❄️", "Neve"];
+  if (c <= 82) return ["🌧", "Pancadas de chuva"];
+  if (c <= 86) return ["❄️", "Pancadas de neve"];
+  return ["⛈", "Tempestade"];
+}
+function get(url, ok, fail) {
+  var x = new XMLHttpRequest();
+  try { x.open("GET", url, true); } catch (e) { if (fail) fail(); return; }
+  x.timeout = 15000;
+  x.onreadystatechange = function () {
+    if (x.readyState !== 4) return;
+    if (x.status === 200) ok(x); else if (fail) fail();
+  };
+  try { x.send(); } catch (e) { if (fail) fail(); }
+}
+function loadWeather() {
+  var url = "https://api.open-meteo.com/v1/forecast?latitude=" + CONFIG.lat + "&longitude=" + CONFIG.lon +
+    "&current_weather=true&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=4";
+  get(url, function (x) {
+    try {
+      var d = JSON.parse(x.responseText), cw = d.current_weather, w = wInfo(cw.weathercode);
+      $("wNow").innerHTML = w[0] + " " + Math.round(cw.temperature) + "°";
+      $("wDesc").innerHTML = w[1] + " · vento " + Math.round(cw.windspeed) + " km/h";
+      var html = "";
+      for (var i = 0; i < d.daily.time.length; i++) {
+        var parts = d.daily.time[i].split("-");
+        var dt = new Date(+parts[0], +parts[1] - 1, +parts[2]);
+        html += '<div class="day">' + (i === 0 ? "hoje" : DIAS[dt.getDay()]) +
+          "<b>" + wInfo(d.daily.weathercode[i])[0] + "</b>" +
+          Math.round(d.daily.temperature_2m_max[i]) + "° / " + Math.round(d.daily.temperature_2m_min[i]) + "°</div>";
+      }
+      $("forecast").innerHTML = html;
+    } catch (e) { $("wDesc").innerHTML = "erro nos dados"; }
+  }, function () { $("wDesc").innerHTML = "sem conexão"; });
+}
+
+/* ---------- Tarefas (salvas no próprio iPad) ---------- */
+var todos = load("todos", []);          // [{t: texto, done: bool, fixa: bool}]
+var todoDay = load("todoDay", "");
+
+function rollDay() {
+  if (todoDay === today()) return;
+  // novo dia: some com o que foi feito, mantém pendentes, recoloca as fixas desmarcadas
+  var kept = [];
+  for (var i = 0; i < todos.length; i++) if (!todos[i].done && !todos[i].fixa) kept.push(todos[i]);
+  var fixed = [];
+  for (var j = 0; j < CONFIG.tarefasFixas.length; j++) fixed.push({ t: CONFIG.tarefasFixas[j], done: false, fixa: true });
+  todos = fixed.concat(kept);
+  todoDay = today();
+  save("todos", todos); save("todoDay", todoDay);
+  save("pomoCount", 0);
+}
+function drawTodos() {
+  var ul = $("tList");
+  if (!todos.length) { ul.innerHTML = '<li class="empty">Nada por hoje. Toque em “+ tarefa”.</li>'; return; }
+  var html = "";
+  for (var i = 0; i < todos.length; i++)
+    html += '<li data-i="' + i + '" class="' + (todos[i].done ? "done" : "") + '">' +
+      '<span class="box"></span><span class="txt">' + esc(todos[i].t) + '</span><span class="del">×</span></li>';
+  ul.innerHTML = html;
+}
+tap($("tList"), function (e) {
+  var el = e.target, li = el;
+  while (li && li.tagName !== "LI") li = li.parentNode;
+  if (!li || !li.getAttribute("data-i")) return;
+  var i = +li.getAttribute("data-i");
+  if (el.className === "del") todos.splice(i, 1); else todos[i].done = !todos[i].done;
+  save("todos", todos); drawTodos();
+});
+tap($("tAdd"), function () {
+  var t = window.prompt("Nova tarefa:");
+  if (t && t.replace(/\s/g, "")) { todos.push({ t: t, done: false, fixa: false }); save("todos", todos); drawTodos(); }
+});
+
+/* ---------- Pomodoro ---------- */
+var pTotal = CONFIG.pomodoroPadrao * 60, pLeft = pTotal, pEnd = 0, pRunning = false, audioCtx = null;
+
+function unlockAudio() {
+  var AC = window.AudioContext || window.webkitAudioContext;
+  if (!audioCtx && AC) audioCtx = new AC();
+  if (audioCtx) { // toca um som mudo para liberar o áudio no iOS
+    var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    g.gain.value = 0; o.connect(g); g.connect(audioCtx.destination);
+    o.start(0); o.stop(audioCtx.currentTime + 0.05);
+  }
+}
+function beep() {
+  if (!audioCtx) return;
+  for (var i = 0; i < 3; i++) {
+    var o = audioCtx.createOscillator(), g = audioCtx.createGain(), t = audioCtx.currentTime + i * 0.6;
+    o.frequency.value = 880; g.gain.value = 0.4;
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(t); o.stop(t + 0.35);
+  }
+}
+function drawPomo() {
+  var s = Math.max(0, Math.round(pLeft));
+  $("pTime").innerHTML = p2(Math.floor(s / 60)) + ":" + p2(s % 60);
+  $("pStart").innerHTML = pRunning ? "Pausar" : "Iniciar";
+  var n = load("pomoCount", 0);
+  $("pCount").innerHTML = n ? (n + (n === 1 ? " sessão concluída hoje" : " sessões concluídas hoje")) : "";
+  var btns = document.querySelectorAll(".btn[data-min]");
+  for (var i = 0; i < btns.length; i++)
+    btns[i].className = "btn" + (+btns[i].getAttribute("data-min") * 60 === pTotal ? " on" : "");
+}
+function tickPomo() {
+  if (!pRunning) return;
+  pLeft = (pEnd - Date.now()) / 1000;
+  if (pLeft <= 0) {
+    pLeft = 0; pRunning = false;
+    $("pomo").className = "card done";
+    if (pTotal >= 20 * 60) save("pomoCount", load("pomoCount", 0) + 1); // pausas curtas não contam
+    beep();
+  }
+  drawPomo();
+}
+tap($("pStart"), function () {
+  unlockAudio();
+  $("pomo").className = "card";
+  if (pRunning) { pRunning = false; pLeft = (pEnd - Date.now()) / 1000; }
+  else { if (pLeft <= 0) pLeft = pTotal; pEnd = Date.now() + pLeft * 1000; pRunning = true; }
+  drawPomo();
+});
+tap($("pReset"), function () { pRunning = false; pLeft = pTotal; $("pomo").className = "card"; drawPomo(); });
+var minBtns = document.querySelectorAll(".btn[data-min]");
+for (var k = 0; k < minBtns.length; k++) (function (b) {
+  tap(b, function () { pTotal = +b.getAttribute("data-min") * 60; pRunning = false; pLeft = pTotal;
+                       $("pomo").className = "card"; drawPomo(); });
+})(minBtns[k]);
+
+/* ---------- Citação da hora ---------- */
+function drawQuote() {
+  var c = CONFIG.citacoes;
+  if (!c.length) return;
+  var q = c[Math.floor(Date.now() / 3600000) % c.length];
+  $("quote").innerHTML = "“" + esc(q[0]) + "”";
+  $("author").innerHTML = "— " + esc(q[1]);
+}
+
+/* ---------- Último post do feed ---------- */
+function parseDate(s) {
+  if (!s) return null;
+  var d = new Date(s);
+  if (isNaN(d.getTime())) d = new Date(String(s).replace(" ", "T") + "Z"); // formato do rss2json
+  return isNaN(d.getTime()) ? null : d;
+}
+function showFeed(title, date) {
+  var el = $("feed");
+  if (!title) { el.style.display = "none"; return; }
+  var isNew = date && (Date.now() - date.getTime()) < 7 * 86400000;
+  el.innerHTML = (isNew ? '<span class="new">NOVO</span>' : "") + esc(CONFIG.feedNome) + " · " + esc(title) +
+    (date ? " · " + date.getDate() + " " + MESES[date.getMonth()] : "");
+  el.style.display = "block";
+}
+function loadFeed(i, viaProxy) {
+  if (!CONFIG.feeds.length) return;
+  if (i >= CONFIG.feeds.length) {
+    if (!viaProxy) loadFeed(0, true);   // nada direto? tenta pelo intermediário
+    return;                             // nada funcionou: a linha fica escondida
+  }
+  var src = CONFIG.feeds[i];
+  var next = function () { loadFeed(i + 1, viaProxy); };
+  if (!viaProxy) {
+    get(src, function (x) {
+      try {
+        var doc = x.responseXML || new DOMParser().parseFromString(x.responseText, "text/xml");
+        var item = doc.getElementsByTagName("item")[0] || doc.getElementsByTagName("entry")[0];
+        if (!item) return next();
+        var t = item.getElementsByTagName("title")[0];
+        var d = item.getElementsByTagName("pubDate")[0] || item.getElementsByTagName("published")[0] ||
+                item.getElementsByTagName("updated")[0];
+        showFeed(t ? t.textContent : "", d ? parseDate(d.textContent) : null);
+      } catch (e) { next(); }
+    }, next);
+  } else {
+    get("https://api.rss2json.com/v1/api.json?rss_url=" + encodeURIComponent(src), function (x) {
+      try {
+        var j = JSON.parse(x.responseText);
+        if (j.status !== "ok" || !j.items || !j.items.length) return next();
+        showFeed(j.items[0].title, parseDate(j.items[0].pubDate));
+      } catch (e) { next(); }
+    }, next);
+  }
+}
+
+/* ---------- Loop ---------- */
+rollDay(); drawTodos();
+tickClock(); drawPomo(); drawQuote(); loadWeather(); loadFeed(0, false);
+setInterval(function () {
+  tickClock(); tickPomo();
+  if (todoDay !== today()) { rollDay(); drawTodos(); drawPomo(); }
+}, 1000);
+setInterval(drawQuote, 60 * 1000);
+setInterval(loadWeather, 30 * 60 * 1000);
+setInterval(function () { loadFeed(0, false); }, 6 * 3600 * 1000);
+/* recarrega a página 1x por dia às 4h, para limpar memória (tarefas ficam salvas) */
+setInterval(function () { var n = new Date(); if (n.getHours() === 4 && n.getMinutes() === 0 && !pRunning) location.reload(); }, 60000);
+</script>
+</body>
+</html>
